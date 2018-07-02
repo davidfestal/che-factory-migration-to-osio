@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.openshift.booster.service;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+import java.util.List;
 
-@Component
-@ConfigurationProperties("greeting")
-public class GreetingProperties {
+public class FactoryDescription {
 
-    private String message = "Hello, %s!";
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
+    public String name;
+    public String desc;
+    public String logo;
+    public String project;
+    public String website;
+    public String category;
+    public boolean badgedRepository;
+    public String badgeLink;
+    public String factory;
+    public List<String> languages;
 }

@@ -1,56 +1,113 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>API Level 0 Mission - Spring Boot</title>
+    <title>Migration of Codenvy.io factories to Openshift.io</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
           integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+    </style>
 </head>
 
 <body>
-<div class="container">
-    <div class="row">
-        <div class="sect1">
-<h2 id="_http_booster">HTTP Booster</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>An example of simple mapping of a business operation to a remote endpoint. By taking this approach, clients use the HTTP protocol as a transport mechanism to call services. Application engineers define the APIs using a broad interpretation of the REST fundamentals, encouraging freedom in design and quick prototyping.</p>
-</div>
-<div class="sect2">
-<h3 id="_using_the_greeting_service">Using the greeting service</h3>
-
-</div>
-</div>
-</div>
-
-        <form class="form-inline">
-            <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" class="form-control" id="name" placeholder="World">
+    <div class="container">    
+        <div class="row">
+            <h3>Migration of Codenvy.io factories to Openshift.io</h3>
+            <div class="row">
+                <label for="osio-info">Information of the OSIO account into which factories should be migrated</label>
+                <div id="osio-info" class="row">
+                    <div class="col-lg-6">
+                        <div class="input-group">
+                            <span class="input-group-addon" id="che-api-url-header">Che server API URL</span>
+                            <input type="text" class="form-control" id="che-api-url" aria-describedby="che-api-url-header">
+                        </div>            
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="input-group">
+                            <span class="input-group-addon" id="osio-token-header">OSIO token</span>
+                            <input type="text" class="form-control" id="osio-token" aria-describedby="osio-token-header">
+                        </div>            
+                    </div>
+                </div>
             </div>
-            <button id="invoke" type="submit" class="btn btn-success">Invoke</button>
-        </form>
-
-        <p class="lead">Result:</p>
-        <pre><code id="greeting-result">Invoke the service to see the result.</code></pre>
+        </div>
+        <hr></hr>
+        <div id="tabs" class="container">    
+            <ul  class="nav nav-tabs">
+                <li class="active"><a  href="#tab1" data-toggle="tab">Codenvy factories</a></li>
+                <li><a href="#tab2" data-toggle="tab">OSIO factories</a></li>
+                <li><a href="#tab3" data-toggle="tab">Migration</a></li>
+            </ul>
+    
+            <div class="tab-content">
+                <div class="tab-pane active" id="tab1">
+                    <div class="row">
+                        <h3>Manage Codenvy factories available on the Eclipse site</h3>
+                    </div>
+                    <div class="row">
+                      <div class="col-lg-4">
+                        <div class="input-group">
+                          <span class="input-group-btn">
+                            <button id="describeCodenvyFactories" class="btn" type="button">Get Eclipse Factories</button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-lg-8">
+                        <div class="input-group">
+                          <input type="text" id="codenvyFactoryId" class="form-control" placeholder="Factory Id">
+                          <span class="input-group-btn">
+                            <button id="exportCodenvyFactory" class="btn" type="button">Export Eclipse Factory</button>
+                          </span>
+                          <span class="input-group-btn">
+                            <button id="exportAsOsioFactory" class="btn" type="button">Export as OSIO Factory</button>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                <div class="tab-pane" id="tab2">
+                    <h3>Nothing for the moment</h3>
+                </div>
+                <div class="tab-pane" id="tab3">
+                    <h3>Nothing for the moment</h3>
+                </div>
+            </div>
+        </div>
+        <hr></hr>
+        <div class="row">
+            <h3>Result</h3>
+            <pre><code id="result">Invoke the service to see the result.</code></pre>
+        </div>
     </div>
-</div>
-
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
-        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
-        crossorigin="anonymous"></script>
-
-<script>
-  $(document).ready(function () {
-    $("#invoke").click(function (e) {
-      var n = $("#name").val() || "World";
-      $.getJSON("/api/greeting?name=" + n, function (res) {
-        $("#greeting-result").text(JSON.stringify(res));
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    
+    <script>
+      $(document).ready(function () {
+        $("#describeCodenvyFactories").click(function (e) {
+          $.getJSON("/api/codenvy/full", function (res) {
+            $("#result").text(JSON.stringify(res, null, 2));
+          });
+          e.preventDefault();
+        });
+        $("#exportCodenvyFactory").click(function (e) {
+          var id = $("#codenvyFactoryId").val();
+          $.getJSON("/api/codenvy/export/" + id, function (res) {
+            $("#result").text(JSON.stringify(res, null, 2));
+          });
+          e.preventDefault();
+        });
+        $("#exportAsOsioFactory").click(function (e) {
+          var id = $("#codenvyFactoryId").val();
+          $.getJSON("/api/codenvy/transform/" + id, function (res) {
+            $("#result").text(JSON.stringify(res, null, 2));
+          });
+          e.preventDefault();
+        });
       });
-      e.preventDefault();
-    });
-  });
-</script>
+    </script>
 
 </body>
 

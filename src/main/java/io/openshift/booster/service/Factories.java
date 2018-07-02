@@ -15,19 +15,8 @@
  */
 package io.openshift.booster.service;
 
-public class Greeting {
+import java.util.List;
 
-    private final String content;
-
-    public Greeting() {
-        this.content = null;
-    }
-
-    public Greeting(String content) {
-        this.content = content;
-    }
-
-    public String getContent() {
-        return content;
-    }
+public class Factories {
+    public List<FactoryDescription> factories;
 }
