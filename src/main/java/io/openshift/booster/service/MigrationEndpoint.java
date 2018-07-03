@@ -412,7 +412,7 @@ public class MigrationEndpoint {
             try {
                 JsonNode migratedNode = mapper.readTree(migrateOsioFactory(key, token, cheApiUrl));
                 if (migratedNode.has("id")) {
-                    val.factory = cheApiUrl.replace("/api/", "f?id=" + migratedNode.get("id"));
+                    val.factory = cheApiUrl.replace("/api/", "/f?id=" + migratedNode.get("id").asText());
                     return new AbstractMap.SimpleEntry<String, JsonNode>(key, mapper.readTree(mapper.writeValueAsString(val)));
                 } else {
                     // error
