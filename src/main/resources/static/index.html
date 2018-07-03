@@ -44,31 +44,92 @@
                         <h3>Manage Codenvy factories available on the Eclipse site</h3>
                     </div>
                     <div class="row">
-                      <div class="col-lg-4">
+                      <div class="col-lg-2">
                         <div class="input-group">
                           <span class="input-group-btn">
                             <button id="describeCodenvyFactories" class="btn" type="button">Get Eclipse Factories</button>
                           </span>
                         </div>
                       </div>
-                      <div class="col-lg-8">
+                      <div class="col-lg-4">
+                        <div class="input-group">
+                          <input type="text" id="codenvyFactoryName" class="form-control" placeholder="Factory name">
+                          <span class="input-group-btn">
+                            <button id="retrieveCodenvyFactoryByName" class="btn" type="button">Find by name</button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-lg-6">
                         <div class="input-group">
                           <input type="text" id="codenvyFactoryId" class="form-control" placeholder="Factory Id">
                           <span class="input-group-btn">
-                            <button id="exportCodenvyFactory" class="btn" type="button">Export Eclipse Factory</button>
+                            <button id="exportCodenvyFactory" class="btn" type="button">Export</button>
                           </span>
                           <span class="input-group-btn">
-                            <button id="exportAsOsioFactory" class="btn" type="button">Export as OSIO Factory</button>
+                            <button id="exportAsOsioFactory" class="btn" type="button">Export for OSIO</button>
                           </span>
                         </div>
                       </div>
                     </div>
                 </div>
                 <div class="tab-pane" id="tab2">
-                    <h3>Nothing for the moment</h3>
+                    <div class="row">
+                        <h3>Manage already-existing OSIO factories available in the given OSIO account</h3>
+                    </div>
+                    <div class="row">
+                      <div class="col-lg-2">
+                        <div class="input-group">
+                          <span class="input-group-btn">
+                            <button id="retrieveExistingOsioFactories" class="btn" type="button">Existing Factories</button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-lg-2">
+                        <div class="input-group">
+                          <span class="input-group-btn">
+                            <button id="retrieveMissingOsioFactories" class="btn" type="button">Missing Factories</button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-lg-4">
+                        <div class="input-group">
+                          <input type="text" id="osioFactoryName" class="form-control" placeholder="Factory name">
+                          <span class="input-group-btn">
+                            <button id="retrieveExistingOsioFactoryByName" class="btn" type="button">Find by name</button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-lg-4">
+                        <div class="input-group">
+                          <input type="text" id="osioFactoryId" class="form-control" placeholder="Factory Id">
+                          <span class="input-group-btn">
+                            <button id="deleteExistingOsioFactory" class="btn" type="button">Delete Osio Factory</button>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                 </div>
                 <div class="tab-pane" id="tab3">
-                    <h3>Nothing for the moment</h3>
+                    <div class="row">
+                        <h3>Migrate Codenvy.io factories to the given OSIO account</h3>
+                    </div>
+                    <div class="row">
+                      <div class="col-lg-8">
+                        <div class="input-group">
+                          <input type="text" id="codenvyFactoryIdToMigrate" class="form-control" placeholder="Codenvy Factory Id">
+                          <span class="input-group-btn">
+                            <button id="migrateOsioFactory" class="btn" type="button">Migrate one</button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-lg-4">
+                        <div class="input-group">
+                          <span class="input-group-btn">
+                            <button id="migrateOsioFactories" class="btn" type="button">Migrate all</button>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -85,27 +146,41 @@
             crossorigin="anonymous"></script>
     
     <script>
+      function register(id, buildUrl, method = $.getJSON) {
+        $(id).click(function (e) {
+          method(buildUrl(), function (res) {
+            $("#result").text(JSON.stringify(res, null, 2));
+          });
+          e.preventDefault();
+        });
+      }
+    
+      function osioQueryParameters() {
+          return "che-api-url=" + encodeURIComponent($("#che-api-url").val()) + "&token=" + encodeURIComponent($("#osio-token").val());
+      }
+
+      $.delete = function(url, callback){
+         
+          return $.ajax({
+            url: url,
+            type: 'DELETE',
+            success: callback,
+            data: {},
+            contentType: "application/json"
+          });
+      }
+      
       $(document).ready(function () {
-        $("#describeCodenvyFactories").click(function (e) {
-          $.getJSON("/api/codenvy/full", function (res) {
-            $("#result").text(JSON.stringify(res, null, 2));
-          });
-          e.preventDefault();
-        });
-        $("#exportCodenvyFactory").click(function (e) {
-          var id = $("#codenvyFactoryId").val();
-          $.getJSON("/api/codenvy/export/" + id, function (res) {
-            $("#result").text(JSON.stringify(res, null, 2));
-          });
-          e.preventDefault();
-        });
-        $("#exportAsOsioFactory").click(function (e) {
-          var id = $("#codenvyFactoryId").val();
-          $.getJSON("/api/codenvy/transform/" + id, function (res) {
-            $("#result").text(JSON.stringify(res, null, 2));
-          });
-          e.preventDefault();
-        });
+        register("#describeCodenvyFactories", () => "/api/codenvy/full");
+        register("#exportCodenvyFactory", () => "/api/codenvy/export/" + $("#codenvyFactoryId").val());
+        register("#retrieveCodenvyFactoryByName", () => "/api/codenvy/find/" + encodeURIComponent($("#codenvyFactoryName").val()));
+        register("#exportAsOsioFactory", () => "/api/codenvy/transform/" + $("#codenvyFactoryId").val());
+        register("#retrieveExistingOsioFactories", () => "/api/osio/existing?" + osioQueryParameters());
+        register("#retrieveMissingOsioFactories", () => "/api/osio/missing?" + osioQueryParameters());
+        register("#retrieveExistingOsioFactoryByName", () => "/api/osio/find/" + encodeURIComponent($("#osioFactoryName").val()) + "?" + osioQueryParameters());
+        register("#deleteExistingOsioFactory", () => "/api/osio/existing/" + $("#osioFactoryId").val() + "?" + osioQueryParameters(), $.delete);
+        register("#migrateOsioFactories", () => "/api/migrate?" + osioQueryParameters());
+        register("#migrateOsioFactory", () => "/api/migrate/" + $("#codenvyFactoryIdToMigrate").val() + "?" + osioQueryParameters());
       });
     </script>
 

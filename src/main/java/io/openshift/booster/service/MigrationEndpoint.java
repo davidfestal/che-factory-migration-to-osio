@@ -16,6 +16,7 @@
 package io.openshift.booster.service;
 
 import java.util.stream.Collectors;
+import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -29,6 +30,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import io.jsonwebtoken.Jwts;
+
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -40,6 +49,9 @@ import javax.ws.rs.QueryParam;
 public class MigrationEndpoint {
     private static final Map<String, String> DOCKERFILE_TO_DOCKERIMAGE = new HashMap<>();
     private static final Map<String, String> OLD_TO_NEW_IMAGES = new HashMap<>();
+    
+    private RestTemplate template = new RestTemplate();
+    private ObjectMapper mapper = new ObjectMapper();
     
     static {
         /*
@@ -206,30 +218,35 @@ public class MigrationEndpoint {
         return retrieveCodenvyfactories().keySet().stream().collect(Collectors.toList());
     }
 
-    private Map<String, FactoryDescription> retrieveCodenvyfactories() {
-        RestTemplate template = new RestTemplate();
+    @GET
+    @Path("/codenvy/full")
+    @Produces("application/json")
+    public Map<String, FactoryDescription> retrieveCodenvyfactories() {
         Factories factories = template.getForObject("https://www.eclipse.org/che/getting-started/cloud/scripts/factories.json", Factories.class);
         return factories.factories.stream().collect(Collectors.toMap(f->f.factory.replace("https://codenvy.io/f?id=", ""), f->f));
     }
     
     @GET
-    @Path("/codenvy/full")
-    @Produces("application/json")
-    public Factories describeCodenvyFactories() throws Exception {
-        RestTemplate template = new RestTemplate();
-        Factories factories = template.getForObject("https://www.eclipse.org/che/getting-started/cloud/scripts/factories.json", Factories.class);
-        return factories;
-    }
-    
-    @GET
     @Path("/codenvy/export/{id}")
     public String retrieveFactoryJson(@PathParam("id") String factoryId) {
-        RestTemplate template = new RestTemplate();
         ResponseEntity<String> response = template.getForEntity("https://codenvy.io/api/factory/" + factoryId + "?validate=false", String.class);
         if (response.getStatusCode().is2xxSuccessful()) {
             return response.getBody();
         }
         return null;
+    }
+    
+    @GET
+    @Path("/codenvy/find/{name}")
+    public String retrieveCodenvyFactoryByName(@PathParam("name") String factoryName) throws Exception {
+        for (String codenvyFactoryId : listCodenvyFactories()) {
+            String json = retrieveFactoryJson(codenvyFactoryId);
+            String name = mapper.readTree(json).get("name").asText();
+            if (name != null && name.equals(factoryName)) {
+                return json;
+            }
+        }
+        return "[]";
     }
     
     private String transformFactoryJson(String json, String factoryId) {
@@ -254,7 +271,6 @@ public class MigrationEndpoint {
                     throw new RuntimeException("recipe 'dockerimage' points to a recipe content not accessible inside the 'codenvy.io' server: " + recipeContent);
                 }
 
-                RestTemplate template = new RestTemplate();
                 try {
                     String recipeRealContent = (String)template.getForObject(recipeContent, String.class, new Object[0]);
                     throw new RuntimeException("recipe 'dockerimage' points to a recipe at the following URL: " + recipeContent + " with the following content :\n" + recipeRealContent);
@@ -283,11 +299,97 @@ public class MigrationEndpoint {
         return transformFactoryJson(retrieveFactoryJson(factoryId), factoryId);
     }
 
+
+    @GET
+    @Path("/osio/find/{name}")
+    public String retrieveExistingOsioFactoryByName(@PathParam("name") String factoryName, @QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("Authorization", "Bearer " + token);
+
+        try {
+            ResponseEntity<String> result = template.exchange(cheApiUrl + "factory/find?name=" + factoryName, HttpMethod.GET, new HttpEntity<String>(headers), String.class);
+            return result.getBody();
+        } catch (HttpClientErrorException e) {
+            return new ObjectMapper().createObjectNode().put("error", e.getStatusCode() + " - " + e.getResponseBodyAsString()).toString();
+        }
+    }
+    
+    @GET
+    @Path("/osio/existing")
+    public String retrieveExistingOsioFactories(@QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
+        if (token == null) {
+            throw new IllegalArgumentException("token should not be null");
+        }
+        String tokenWithoutSignature = token;
+        int lastDot = token.lastIndexOf('.');
+        if (lastDot > 0) {
+            tokenWithoutSignature = token.substring(0, lastDot + 1);
+        }
+        String userId = Jwts.parser().parseClaimsJwt(tokenWithoutSignature).getBody().getSubject();
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("Authorization", "Bearer " + token);
+
+        ArrayNode result = mapper.createArrayNode();
+        try {
+            ResponseEntity<String> rawResult = template.exchange(cheApiUrl + "factory/find?creator.userId=" + userId, HttpMethod.GET, new HttpEntity<String>(headers), String.class);
+            for (JsonNode factory : mapper.readTree(rawResult.getBody())) {
+                ObjectNode factoryDesc = mapper.createObjectNode();
+                factoryDesc.put("osioFactoryId", factory.get("id").asText());
+                factoryDesc.put("name", factory.get("name").asText());
+                result.add(factoryDesc);
+            }
+            return result.toString();
+        } catch (HttpClientErrorException e) {
+            return new ObjectMapper().createObjectNode().put("error", e.getStatusCode() + " - " + e.getResponseBodyAsString()).toString();
+        }
+    }
+
+    @GET
+    @Path("/osio/missing")
+    public String retrieveMissingOsioFactories(@QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
+        
+        ArrayNode result = mapper.createArrayNode();
+        
+        for (String codenvyFactoryId : listCodenvyFactories()) {
+            String json = retrieveFactoryJson(codenvyFactoryId);
+            String name = mapper.readTree(json).get("name").asText();
+            JsonNode osioFactoryNode = mapper.readTree(retrieveExistingOsioFactoryByName(name, token, cheApiUrl));
+            if (osioFactoryNode.isArray() && osioFactoryNode.size() > 0) {
+                osioFactoryNode = osioFactoryNode.get(0);
+            }
+            if (! osioFactoryNode.has("name")) {
+                ObjectNode factoryDesc = mapper.createObjectNode();
+                factoryDesc.put("codenvyFactoryId", codenvyFactoryId);
+                factoryDesc.put("name", name);
+                result.add(factoryDesc);
+            }
+        }
+        return result.toString();
+    }
+    
+    @DELETE
+    @Path("/osio/existing/{id}")
+    public String deleteExistingOsioFactory(@PathParam("id") String factoryId, @QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("Authorization", "Bearer " + token);
+
+        try {
+            ResponseEntity<String> result = template.exchange(cheApiUrl + "factory/" + factoryId, HttpMethod.DELETE, new HttpEntity<String>(headers), String.class);
+            return result.toString();
+        } catch (HttpClientErrorException e) {
+            return new ObjectMapper().createObjectNode().put("error", e.getStatusCode() + " - " + e.getResponseBodyAsString()).toString();
+        }
+    }
+    
+
     @GET
     @Path("/migrate/{id}")
     public String migrateOsioFactory(@PathParam("id") String factoryId, @QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
         String json = transformFactoryJson(retrieveFactoryJson(factoryId), factoryId);
-        RestTemplate template = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add("Authorization", "Bearer " + token);
@@ -296,16 +398,30 @@ public class MigrationEndpoint {
             ResponseEntity<String> result = template.exchange(cheApiUrl + "factory", HttpMethod.POST, new HttpEntity<String>(json, headers), String.class);
             return result.getBody();
         } catch (HttpClientErrorException e) {
-            return e.getStatusCode() + " - " + e.getResponseBodyAsString();
+            return new ObjectMapper().createObjectNode().put("error", e.getStatusCode() + " - " + e.getResponseBodyAsString()).toString();
         }
     }
     
     @GET
-    @Path("/migrate/all")
-    public void migrateOsioFactories(@QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
-        for (String id : listCodenvyFactories()) {
-            System.out.println(migrateOsioFactory(id, token, cheApiUrl));
-        }
+    @Path("/migrate")
+    public Map<String, JsonNode> migrateOsioFactories(@QueryParam("token") String token, @QueryParam("che-api-url") String cheApiUrl) throws Exception {
+        Map<String, FactoryDescription> codenvyFactories = retrieveCodenvyfactories();
+        return codenvyFactories.entrySet().stream().map((entry) -> {
+            String key = entry.getKey();
+            FactoryDescription val = entry.getValue();
+            try {
+                JsonNode migratedNode = mapper.readTree(migrateOsioFactory(key, token, cheApiUrl));
+                if (migratedNode.has("id")) {
+                    val.factory = cheApiUrl.replace("/api/", "f?id=" + migratedNode.get("id"));
+                    return new AbstractMap.SimpleEntry<String, JsonNode>(key, mapper.readTree(mapper.writeValueAsString(val)));
+                } else {
+                    // error
+                    return new AbstractMap.SimpleEntry<String, JsonNode>(key, migratedNode);
+                }
+            } catch(Exception e) {
+                return new AbstractMap.SimpleEntry<String, JsonNode>(key, new ObjectMapper().createObjectNode().put("error", e.toString()));
+            }
+        }).collect(Collectors.toMap(AbstractMap.SimpleEntry<String, JsonNode>::getKey, AbstractMap.SimpleEntry<String, JsonNode>::getValue));
     }
 }
 
