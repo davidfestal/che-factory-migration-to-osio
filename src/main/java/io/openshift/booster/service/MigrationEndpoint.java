@@ -112,7 +112,7 @@ public class MigrationEndpoint {
          */
         DOCKERFILE_TO_DOCKERIMAGE.put(
             "/recipe/recipega4hxep75ipg04yo/script",
-            "FROM codenvy/ubuntu_jdk8");
+            "codenvy/ubuntu_jdk8");
         
         /*
         FROM codenvy/ubuntu_jdk8
