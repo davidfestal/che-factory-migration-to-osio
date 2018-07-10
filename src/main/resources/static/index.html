@@ -93,17 +93,18 @@
                       </div>
                       <div class="col-lg-4">
                         <div class="input-group">
-                          <input type="text" id="osioFactoryName" class="form-control" placeholder="Factory name">
+                          <input type="text" id="osioFactoryName" class="form-control" placeholder="Osio Factory name">
                           <span class="input-group-btn">
-                            <button id="retrieveExistingOsioFactoryByName" class="btn" type="button">Find by name</button>
+                            <button id="retrieveExistingOsioFactoryByName" class="btn" type="button">Find</button>
                           </span>
                         </div>
                       </div>
                       <div class="col-lg-4">
                         <div class="input-group">
-                          <input type="text" id="osioFactoryId" class="form-control" placeholder="Factory Id">
+                          <input type="text" id="osioFactoryId" class="form-control" placeholder="Osio Factory Id">
                           <span class="input-group-btn">
-                            <button id="deleteExistingOsioFactory" class="btn" type="button">Delete Osio Factory</button>
+                            <button id="retrieveExistingOsioFactory" class="btn" type="button">Export</button>
+                            <button id="deleteExistingOsioFactory" class="btn" type="button">Delete</button>
                           </span>
                         </div>
                       </div>
@@ -118,7 +119,8 @@
                         <div class="input-group">
                           <input type="text" id="codenvyFactoryIdToMigrate" class="form-control" placeholder="Codenvy Factory Id">
                           <span class="input-group-btn">
-                            <button id="migrateOsioFactory" class="btn" type="button">Migrate one</button>
+                            <button id="migrateOsioFactory" class="btn" type="button">Migrate</button>
+                            <button id="migratedOsioFactory" class="btn" type="button">Show migrated</button>
                           </span>
                         </div>
                       </div>
@@ -126,6 +128,7 @@
                         <div class="input-group">
                           <span class="input-group-btn">
                             <button id="migrateOsioFactories" class="btn" type="button">Migrate all</button>
+                            <button id="migratedOsioFactories" class="btn" type="button">Show all migrated</button>
                           </span>
                         </div>
                       </div>
@@ -148,7 +151,11 @@
     <script>
       function register(id, buildUrl, method = $.getJSON) {
         $(id).click(function (e) {
-          method(buildUrl(), function (res) {
+          method(buildUrl())
+          .done(function (res) {
+            $("#result").text(JSON.stringify(res, null, 2));
+          })
+          .fail(function (res) {
             $("#result").text(JSON.stringify(res, null, 2));
           });
           e.preventDefault();
@@ -178,9 +185,12 @@
         register("#retrieveExistingOsioFactories", () => "/api/osio/existing?" + osioQueryParameters());
         register("#retrieveMissingOsioFactories", () => "/api/osio/missing?" + osioQueryParameters());
         register("#retrieveExistingOsioFactoryByName", () => "/api/osio/find/" + encodeURIComponent($("#osioFactoryName").val()) + "?" + osioQueryParameters());
+        register("#retrieveExistingOsioFactory", () => "/api/osio/existing/" + $("#osioFactoryId").val() + "?" + osioQueryParameters());
         register("#deleteExistingOsioFactory", () => "/api/osio/existing/" + $("#osioFactoryId").val() + "?" + osioQueryParameters(), $.delete);
         register("#migrateOsioFactories", () => "/api/migrate?" + osioQueryParameters());
         register("#migrateOsioFactory", () => "/api/migrate/" + $("#codenvyFactoryIdToMigrate").val() + "?" + osioQueryParameters());
+        register("#migratedOsioFactories", () => "/api/migrated?" + osioQueryParameters());
+        register("#migratedOsioFactory", () => "/api/migrated/" + $("#codenvyFactoryIdToMigrate").val() + "?" + osioQueryParameters());
       });
     </script>
 
