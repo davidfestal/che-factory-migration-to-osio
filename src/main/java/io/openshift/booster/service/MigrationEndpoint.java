@@ -264,7 +264,8 @@ public class MigrationEndpoint {
         .replaceFirst("\"servers\":\\{\\}(.*)(\"previewUrl\":\"\\$\\{server\\.(\\d+)/tcp\\}[^\"]*\")", "\"servers\":{\"$3/tcp\":{\"port\":\"$3\",\"protocol\":\"http\"}}$1$2")
         .replaceFirst("(\"previewUrl\":\"\\$\\{server\\.(\\d+)/tcp\\}[^\"]*\")(.*)\"servers\":\\{\\}", "$1$3\"servers\":{\"$2/tcp\":{\"port\":\"$2\",\"protocol\":\"http\"}}")
         .replaceFirst(",\"creator\":\\{[^\\}]+\\}", "")
-        .replaceFirst(",\"id\":\"" + factoryId + "\"", "");
+        .replaceFirst(",\"id\":\"" + factoryId + "\"", "")
+        .replace("TDashboardOMCAT_HOME", "TOMCAT_HOME"); // This is added to fix a bug in one of the existing Codenvy.io factories
         String recipeType = osioFactoryJson.replaceFirst(".*\"recipe\":\\{[^\\}]*\"type\":\"([^\"]+)\"[^\\}]*\\}.*", "$1");
         String recipeContent = osioFactoryJson.replaceFirst(".*\"recipe\":\\{[^\\}]*\"content\":\"([^\"]+)\"[^\\}]*\\}.*", "$1");
         String newRecipe = null;
