@@ -207,6 +207,11 @@ public class MigrationEndpoint {
 
         OLD_TO_NEW_IMAGES.put("codenvy/ubuntu_jdk8", "registry.devshift.net/che/centos_jdk8");
         OLD_TO_NEW_IMAGES.put("codenvy/node", "registry.devshift.net/che/centos-nodejs");
+        OLD_TO_NEW_IMAGES.put("codenvy/cpp_gcc", "eclipse/cpp_gcc");
+        OLD_TO_NEW_IMAGES.put("codenvy/meteor", "eclipse/meteor");
+        OLD_TO_NEW_IMAGES.put("codenvy/ubuntu_gradle", "eclipse/ubuntu_gradle");
+        OLD_TO_NEW_IMAGES.put("codenvy/ubuntu_wildfly8", "eclipse/ubuntu_wildfly8");
+        OLD_TO_NEW_IMAGES.put("codenvy/php", "eclipse/php");
     }
 
     public MigrationEndpoint() {
